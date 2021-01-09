@@ -1,5 +1,5 @@
-# Scoring API
-Homework #3 for 'OTUS Python Professional' Course
+## Scoring API
+### Homework #3 for 'OTUS Python Professional' Course
 
 Простой сервер, валидирующий запросы и отдающий ответ. Подробные условия задания в файле `desc.md`.
 
