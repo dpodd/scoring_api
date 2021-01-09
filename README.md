@@ -1,2 +1,20 @@
 # Scoring API
-Howework #3 for 'OTUS Python Professional' Course
+Homework #3 for 'OTUS Python Professional' Course
+
+Простой сервер, валидирующий запросы и отдающий ответ. Подробные условия задания в файле `desc.md`.
+
+Задание протестировано для Python 3.8.
+
+Запуск локального сервера (порт по умолчанию 8089):
+```
+> python api.py
+```
+Возможно указать необязательные параметры: номер порта и имя лог-файла:
+```
+> python api.py [-p | --port 9000] [-l | --log log.txt]
+```
+Запуск тестов:
+
+```
+> python test.py
+```
