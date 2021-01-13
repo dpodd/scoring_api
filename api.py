@@ -151,10 +151,14 @@ class DateField(BaseField):
                 day = int(match.group(1))
                 month = int(match.group(2))
                 year = int(match.group(3))
+                try:
+                    date = datetime.date(year=year, month=month, day=day)
+                except:
+                    raise ValidationError(message="Invalid date; date should have a format 'DD.MM.YYYY', but given '%s'" % value)
             else:
                 raise ValidationError(message="Invalid date; date should have a format DD.MM.YYYY")
 
-            self._value = datetime.date(year=year, month=month, day=day)
+            self._value = date
 
 
 class BirthDayField(BaseField):
@@ -177,10 +181,12 @@ class BirthDayField(BaseField):
                 day = int(match.group(1))
                 month = int(match.group(2))
                 year = int(match.group(3))
+                try:
+                    birthday = datetime.date(year=year, month=month, day=day)
+                except:
+                    raise ValidationError(message="Invalid date; date should have a format 'DD.MM.YYYY', but given '%s'" % value)
             else:
-                raise ValidationError(message="Invalid date; date should have a format DD.MM.YYYY")
-
-            birthday = datetime.date(year=year, month=month, day=day)
+                raise ValidationError(message="Invalid date; date should have a format 'DD.MM.YYYY', but given '%s'" % value)
 
             if datetime.date.today() - birthday > datetime.timedelta(AGE_LIMIT * 365.2425):
                 raise ValidationError(message="Age limit exceeded")
