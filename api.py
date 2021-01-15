@@ -10,7 +10,7 @@ import uuid
 from optparse import OptionParser
 from typing import Type
 import re
-from scoring import get_score, get_interests
+import scoring
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 SALT = "Otus"
@@ -128,7 +128,7 @@ class PhoneField(BaseField):
             if not phone_pattern.match('%s' % value):
                 raise ValidationError(message="Invalid phone number")
 
-            self._value = value
+            self._value = str(value)
 
 
 class DateField(BaseField):
@@ -267,13 +267,12 @@ class ClientsInterestsRequest(MethodRequest):
         self.date = request.arguments.get('date')
         return self
 
-    def get_interests(self):
-        store = {"nclients": 0}
+    def get_interests(self, store):
         result = {}
         for cid in self.client_ids:
-            interests, store = get_interests(store, cid)
+            interests = scoring.get_interests(store, cid)
             result.update({str(cid): interests})
-        return result, store
+        return result
 
 
 class OnlineScoreRequest(MethodRequest):
@@ -299,7 +298,7 @@ class OnlineScoreRequest(MethodRequest):
         return self
 
     def get_score(self):
-        return get_score(None, self.phone, self.email, birthday=self.birthday,
+        return scoring.get_score(None, self.phone, self.email, birthday=self.birthday,
                          gender=self.gender, first_name=self.first_name, last_name=self.last_name)
 
 
@@ -341,8 +340,8 @@ def method_handler(request, ctx, store):
 
         elif request.method == 'clients_interests':
             request = ClientsInterestsRequest().validate(request)
-            response, store = request.get_interests()
-            ctx.update(store)
+            response = request.get_interests(store)
+            ctx.update({"nclients": len(response)})
             return response, OK, ctx
     except ValidationError as e:
         logging.error("Validation error: %s" % e.message)

@@ -2,6 +2,7 @@ import hashlib
 import datetime
 import functools
 import unittest
+from unittest.mock import patch
 
 import api
 from api import ClientIDsField, DateField, BirthDayField, CharField, EmailField, PhoneField, ArgumentsField, GenderField,\
@@ -14,11 +15,11 @@ def cases(cases):
         def wrapper(*args):
             for c in cases:
                 new_args = args + (c if isinstance(c, tuple) else (c,))
-                try:
-                    f(*new_args)
-                except:
-                    print(f"FAILED TEST with arguments: {new_args[1]} \n\tin {new_args[0]}")
-                    print('~'*10)
+                # try:
+                f(*new_args)
+                # except:
+                #     print(f"FAILED TEST with arguments: {new_args[1]} \n\tin {new_args[0]}")
+                #     print('~'*10)
         return wrapper
     return decorator
 
@@ -134,11 +135,21 @@ class TestSuite(unittest.TestCase):
         {"client_ids": [1, 2], "date": "19.07.2017"},
         {"client_ids": [0]},
     ])
-    def test_ok_interests_request(self, arguments):
+    @patch('api.scoring')
+    def test_ok_interests_request(self, arguments, mock):
+        print('ARGUMENTS: ', arguments, mock)
+        mock_scoring = mock
         request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
         self.set_valid_auth(request)
+        mock_scoring.get_interests.return_value({
+            "1": ['sport', 'books'],
+            "2": ['music', 'travel'],
+            "3": ["books"]
+        })
         response, code, ctx = self.get_response(request)
+        print("RESULT OF MOCKING: ", response)
         self.assertEqual(api.OK, code, arguments)
+        print("RRRR: ", arguments["client_ids"], response, "CTX: ", ctx)
         self.assertEqual(len(arguments["client_ids"]), len(response))
         self.assertTrue(all(v and isinstance(v, list) and all(isinstance(i, str) for i in v)
                         for v in response.values()))
