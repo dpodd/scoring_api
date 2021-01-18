@@ -310,6 +310,7 @@ def check_auth(request):
     else:
         phrase = request.account + request.login + SALT
         digest = hashlib.sha512(phrase.encode('utf-8')).hexdigest()
+        print("TOKEN: ", digest)
     if digest == request.token:
         return True
     return False
