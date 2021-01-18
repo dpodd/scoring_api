@@ -5,11 +5,11 @@ A simple server that validates requests and serves requests with some data. More
 
 The script was tested with Python 3.8.
 
-To fire up the server (with a default port 8089) use:
+To fire up the server with a default port 8089 use:
 ```
 $ python api.py
 ```
-It is possible to add optional parameters: a port number and name of the log file.
+It is possible to add optional parameters: a port number and the name of a log file.
 ```
 $ python api.py [-p | --port 9000] [-l | --log log.txt]
 ```
