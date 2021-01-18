@@ -3,11 +3,10 @@ import datetime
 import functools
 import unittest
 from unittest.mock import patch
-
 import api
 from api import ClientIDsField, DateField, BirthDayField, CharField, EmailField, PhoneField, ArgumentsField, GenderField,\
                 ValidationError
-
+from icecream import ic
 
 def cases(cases):
     def decorator(f):
@@ -23,6 +22,16 @@ def cases(cases):
         return wrapper
     return decorator
 
+
+def mock_get_interests(store, cid):
+    if cid == 1:
+        return ['sport', 'books']
+    elif cid == 2:
+        return ['music', 'travel']
+    elif cid == 3:
+        return ["books"]
+    else:
+        return ['cars']
 
 class TestSuite(unittest.TestCase):
     def setUp(self):
@@ -101,6 +110,7 @@ class TestSuite(unittest.TestCase):
         request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
         self.set_valid_auth(request)
         response, code, ctx = self.get_response(request)
+        ic(response, code, ctx)
         self.assertEqual(api.OK, code, arguments)
         score = response.get("score")
         self.assertTrue(isinstance(score, (int, float)) and score >= 0, arguments)
@@ -123,9 +133,12 @@ class TestSuite(unittest.TestCase):
         {"client_ids": ["1", "2"], "date": "20.07.2017"},
         {"client_ids": [1, 2], "date": "XXX"},
     ])
-    def test_invalid_interests_request(self, arguments):
+    @patch('api.get_interests')
+    def test_invalid_interests_request(self, arguments, mock):
         request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
         self.set_valid_auth(request)
+        # mock request to Redis server
+        mock.side_effect = mock_get_interests
         response, code, ctx = self.get_response(request)
         self.assertEqual(api.INVALID_REQUEST, code, arguments)
         self.assertTrue(len(response))
@@ -135,21 +148,14 @@ class TestSuite(unittest.TestCase):
         {"client_ids": [1, 2], "date": "19.07.2017"},
         {"client_ids": [0]},
     ])
-    @patch('api.scoring')
+    @patch('api.get_interests')
     def test_ok_interests_request(self, arguments, mock):
-        print('ARGUMENTS: ', arguments, mock)
-        mock_scoring = mock
         request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
         self.set_valid_auth(request)
-        mock_scoring.get_interests.return_value({
-            "1": ['sport', 'books'],
-            "2": ['music', 'travel'],
-            "3": ["books"]
-        })
+        # mock request to Redis server
+        mock.side_effect = mock_get_interests
         response, code, ctx = self.get_response(request)
-        print("RESULT OF MOCKING: ", response)
         self.assertEqual(api.OK, code, arguments)
-        print("RRRR: ", arguments["client_ids"], response, "CTX: ", ctx)
         self.assertEqual(len(arguments["client_ids"]), len(response))
         self.assertTrue(all(v and isinstance(v, list) and all(isinstance(i, str) for i in v)
                         for v in response.values()))

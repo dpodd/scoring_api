@@ -10,8 +10,9 @@ import uuid
 from optparse import OptionParser
 from typing import Type
 import re
-import scoring
+from scoring import get_interests, get_score
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from store import Store
 
 SALT = "Otus"
 ADMIN_LOGIN = "admin"
@@ -270,7 +271,7 @@ class ClientsInterestsRequest(MethodRequest):
     def get_interests(self, store):
         result = {}
         for cid in self.client_ids:
-            interests = scoring.get_interests(store, cid)
+            interests = get_interests(store, cid)
             result.update({str(cid): interests})
         return result
 
@@ -297,8 +298,8 @@ class OnlineScoreRequest(MethodRequest):
 
         return self
 
-    def get_score(self):
-        return scoring.get_score(None, self.phone, self.email, birthday=self.birthday,
+    def get_score(self, store):
+        return get_score(store, self.phone, self.email, birthday=self.birthday,
                          gender=self.gender, first_name=self.first_name, last_name=self.last_name)
 
 
@@ -309,6 +310,8 @@ def check_auth(request):
     else:
         phrase = request.account + request.login + SALT
         digest = hashlib.sha512(phrase.encode('utf-8')).hexdigest()
+        from icecream import ic
+        ic(digest)
     if digest == request.token:
         return True
     return False
@@ -332,7 +335,7 @@ def method_handler(request, ctx, store):
             # process a request
             request = OnlineScoreRequest().validate(request)
             if not request.is_admin:
-                score = request.get_score()
+                score = request.get_score(store)
             else:
                 score = 42
             response = {"score": score}
@@ -353,7 +356,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
     router = {
         "method": method_handler
     }
-    store = None
+    store = Store()
 
     def get_request_id(self, headers):
         return headers.get('HTTP_X_REQUEST_ID', uuid.uuid4().hex)

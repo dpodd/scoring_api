@@ -1,4 +1,8 @@
 import redis
+import logging
+import time
+
+MAX_ATTEMPTS = 5
 
 
 class Store:
@@ -9,15 +13,32 @@ class Store:
         return self.client.ping()
 
     def set(self, key, value):
-        self.client.set(key, value)
+        n = 0
+        while n <= MAX_ATTEMPTS:
+            try:
+                self.client.set(key, value)
+            except Exception as e:
+                logging.info("Cannot connect to Redis: %s ..." % e)
+                n += 1
+                time.sleep(1)
+        raise redis.exceptions.ConnectionError
 
     def get(self, key: str):
-        resp = self.client.get(key)
-        if resp:
-            return resp.decode("utf-8")
+        n = 0
+        while n <= MAX_ATTEMPS:
+            try:
+                resp = self.client.get(key)
+            except Exception as e:
+                logging.info("Cannot connect to Redis: %s ..." % e)
+                n += 1
+                time.sleep(1)
+            else:
+                if resp:
+                    return resp.decode("utf-8")
+        raise redis.exceptions.ConnectionError
 
     def cache_set(self, key: str, value, seconds_to_expire):
         self.client.setex(key, seconds_to_expire, value)
 
     def cache_get(self, key: str):
-        pass
+        return self.get(key)

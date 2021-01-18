@@ -31,7 +31,9 @@ def get_score(store, phone, email, birthday=None, gender=None, first_name=None, 
         birthday.strftime("%Y%m%d") if birthday is not None else "",
     ]
     key = "uid:" + hashlib.md5("".join(key_parts).encode("utf-8")).hexdigest()
-    print(key)
+    # --------------------
+    from icecream import ic
+    ic(key)
     # try get from cache,
     # fallback to heavy calculation in case of cache miss
     score = store.cache_get(key) or 0
