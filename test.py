@@ -2,11 +2,16 @@ import hashlib
 import datetime
 import functools
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock, Mock
 import api
 from api import ClientIDsField, DateField, BirthDayField, CharField, EmailField, PhoneField, ArgumentsField, GenderField,\
                 ValidationError
+from store import Store
+from scoring import get_score
 from icecream import ic
+import traceback
+import sys
+
 
 def cases(cases):
     def decorator(f):
@@ -14,11 +19,11 @@ def cases(cases):
         def wrapper(*args):
             for c in cases:
                 new_args = args + (c if isinstance(c, tuple) else (c,))
-                # try:
-                f(*new_args)
-                # except:
-                #     print(f"FAILED TEST with arguments: {new_args[1]} \n\tin {new_args[0]}")
-                #     print('~'*10)
+                try:
+                    f(*new_args)
+                except:
+                    print(f"FAILED TEST with arguments: {new_args[1]} \n\tin {new_args[0]}")
+                    #traceback.print_exception(*sys.exc_info())
         return wrapper
     return decorator
 
@@ -33,11 +38,12 @@ def mock_get_interests(store, cid):
     else:
         return ['cars']
 
+
 class TestSuite(unittest.TestCase):
     def setUp(self):
         self.context = {}
         self.headers = {}
-        self.settings = {}
+        self.settings = Store()
 
     def get_response(self, request):
         return api.method_handler({"body": request, "headers": self.headers}, self.context, self.settings)
@@ -106,11 +112,33 @@ class TestSuite(unittest.TestCase):
         {"phone": "79175002040", "email": "stupnikov@otus.ru", "gender": 1, "birthday": "01.01.2000",
          "first_name": "a", "last_name": "b"},
     ])
+    def test_ok_score_request_while_cache_is_down(self, arguments):
+        request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
+        # Mocking Redis DB server
+        self.settings = Mock()
+        self.settings.cache_get.return_value = None
+        self.settings.cache_set.return_value = None
+        self.set_valid_auth(request)
+        response, code, ctx = self.get_response(request)
+        self.assertEqual(api.OK, code, arguments)
+        score = response.get("score")
+        self.assertTrue(isinstance(score, (int, float)) and score >= 0, arguments)
+        self.assertEqual(sorted(self.context["has"]), sorted(arguments.keys()))
+
+    @cases([
+        {"phone": "79175002040", "email": "stupnikov@otus.ru"},
+        {"phone": 79175002040, "email": "stupnikov@otus.ru"},
+        {"gender": 1, "birthday": "01.01.2000", "first_name": "a", "last_name": "b"},
+        {"gender": 0, "birthday": "01.01.2000"},
+        {"gender": 2, "birthday": "01.01.2000"},
+        {"first_name": "a", "last_name": "b"},
+        {"phone": "79175002040", "email": "stupnikov@otus.ru", "gender": 1, "birthday": "01.01.2000",
+         "first_name": "a", "last_name": "b"},
+    ])
     def test_ok_score_request(self, arguments):
         request = {"account": "horns&hoofs", "login": "h&f", "method": "online_score", "arguments": arguments}
         self.set_valid_auth(request)
         response, code, ctx = self.get_response(request)
-        ic(response, code, ctx)
         self.assertEqual(api.OK, code, arguments)
         score = response.get("score")
         self.assertTrue(isinstance(score, (int, float)) and score >= 0, arguments)
@@ -446,6 +474,7 @@ class TestFieldsSuite(unittest.TestCase):
         stub.arguments = ArgumentsField(**init_kwargs)
         inst = stub()
         inst.arguments = args.get("case args")
+
 
 
 if __name__ == "__main__":

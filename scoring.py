@@ -1,24 +1,3 @@
-# import random
-#
-#
-# def get_score(store, phone, email, birthday=None, gender=None, first_name=None, last_name=None):
-#     score = 0
-#     if phone:
-#         score += 1.5
-#     if email:
-#         score += 1.5
-#     if birthday and gender:
-#         score += 1.5
-#     if first_name and last_name:
-#         score += 0.5
-#     return score
-#
-#
-# def get_interests(store, cid):
-#     interests = ["cars", "pets", "travel", "hi-tech", "sport", "music", "books", "tv", "cinema", "geek", "otus"]
-#     store["nclients"] += 1
-#     return random.sample(interests, 2), store
-
 import hashlib
 import json
 
@@ -31,14 +10,11 @@ def get_score(store, phone, email, birthday=None, gender=None, first_name=None, 
         birthday.strftime("%Y%m%d") if birthday is not None else "",
     ]
     key = "uid:" + hashlib.md5("".join(key_parts).encode("utf-8")).hexdigest()
-    # --------------------
-    from icecream import ic
-    ic(key)
     # try get from cache,
     # fallback to heavy calculation in case of cache miss
     score = store.cache_get(key) or 0
     if score:
-        return score
+        return float(score)
     if phone:
         score += 1.5
     if email:
@@ -49,7 +25,7 @@ def get_score(store, phone, email, birthday=None, gender=None, first_name=None, 
         score += 0.5
     # cache for 60 minutes
     store.cache_set(key, str(score), 60 * 60)
-    return score
+    return float(score)
 
 
 def get_interests(store, cid):
