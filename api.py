@@ -312,19 +312,14 @@ def check_auth(request):
 def method_handler(request, ctx, store):
     response, code, ctx = None, None, ctx
     try:
-        # 1 validate general request structure
         request = MethodRequest().validate(request)
 
-        # 2 check auth
         if not check_auth(request):
             logging.error("Wrong authentication token")
             return None, FORBIDDEN, ctx
 
-        # 3 validate method arguments and dispatch to a specific method
         if request.method == 'online_score':
-            # adding args to the context dictionary
             ctx['has'] = [key for key in request.arguments.keys() if key in OnlineScoreRequest.VALID_ARGUMENTS]
-            # process a request
             request = OnlineScoreRequest().validate(request)
             if not request.is_admin:
                 score = request.get_score()
