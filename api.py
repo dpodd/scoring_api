@@ -95,13 +95,13 @@ class BaseField(ABC):
 class CharField(BaseField):
     def check_conditions(self, instance, value):
         if not isinstance(value, str):
-            raise ValidationError(message="The parameter should be a string")
+            raise ValidationError(message="The parameter %s should be a string" % self._name)
 
 
 class ArgumentsField(BaseField):
     def check_conditions(self, instance, value):
         if not isinstance(value, dict):
-            raise ValidationError(message="The parameter should be a dictionary")
+            raise ValidationError(message="The parameter %s should be a dictionary" % self._name)
 
 
 class EmailField(CharField):
@@ -115,7 +115,7 @@ class EmailField(CharField):
 class PhoneField(BaseField):
     def check_conditions(self, instance, value):
         if not isinstance(value, (int, str)):
-            raise ValidationError(message="The parameter should be a string or integer")
+            raise ValidationError(message="The parameter %s should be a string or integer" % self._name)
 
         phone_pattern = re.compile(r'^7\d{10}')
         if not phone_pattern.match('%s' % value):
@@ -150,7 +150,7 @@ class BirthDayField(DateField):
 class GenderField(BaseField):
     def check_conditions(self, instance, value):
         if not isinstance(value, int):
-            raise ValidationError(message="The parameter should be an integer")
+            raise ValidationError(message="The parameter %s should be an integer" % self._name)
 
         if value not in [0, 1, 2]:
             raise ValidationError(message="Invalid gender field")
@@ -162,14 +162,14 @@ class GenderField(BaseField):
 class ClientIDsField(BaseField):
     def check_conditions(self, instance, value):
         if not isinstance(value, list):
-            raise ValidationError(message="The parameter should be a list")
+            raise ValidationError(message="The parameter %s should be a list" % self._name)
 
         if not value:
             raise ValidationError(message="Client ID list is empty")
 
         for item in value:
             if not isinstance(item, int):
-                raise ValidationError(message="Invalid client ID is given")
+                raise ValidationError(message="Invalid client ID is given: %s" % value)
 
 
 class ApiRequest:
