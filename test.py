@@ -4,6 +4,7 @@ import functools
 import unittest
 
 import api
+import sys, traceback
 
 
 def cases(cases):
@@ -12,11 +13,13 @@ def cases(cases):
         def wrapper(*args):
             for c in cases:
                 new_args = args + (c if isinstance(c, tuple) else (c,))
-                try:
-                    f(*new_args)
-                except:
-                    from icecream import ic
-                    ic('TEST CASE FAILED', new_args)
+                # try:
+                f(*new_args)
+                # except:
+                #     from icecream import ic
+                    # ic('TEST CASE FAILED', new_args)
+                    #print(f"FAILED TEST with arguments: {new_args[1]} \n\tin {new_args[0]}")
+                    #traceback.print_exception(*sys.exc_info())
         return wrapper
     return decorator
 

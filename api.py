@@ -45,190 +45,131 @@ class ValidationError(Exception):
         self.message = message
 
 
+class DataNotProvided(Exception):
+    """Handling 'None' assignment"""
+
+from icecream import ic
 class BaseField(ABC):
     def __init__(self, required=False, nullable=True):
         self.required = required
         self.nullable = nullable
-        self._value = None
+
+    def __set_name__(self, owner, name):
+        self._name = name
 
     def __get__(self, instance, owner):
-        return self._value
+        return instance.__dict__[self._name]
+
+    def __set__(self, instance, value):
+        try:
+            self.validate_field(instance, value)
+        except DataNotProvided:
+            instance.__dict__[self._name] = None
+        except:
+            logging.exception("Validation error")
+            raise
+        else:
+            value = self.value_conversion(value)
+            instance.__dict__[self._name] = value
+
+    def validate_field(self, instance, value):
+        if value is None:
+            if self.required is True:
+                raise ValidationError(message="The parameter '%s' is mandatory" % self._name)
+
+            if self.nullable is False:
+                raise ValidationError(message="The parameter '%s' should be non-nullable" % self._name)
+
+            raise DataNotProvided
+        else:
+            self.check_conditions(instance, value)
+
+    def check_conditions(self, instance, value):
+        """Specific conditions for each field"""
+
+    def value_conversion(self, value):
+        """Method to implement in child classes"""
+        return value
 
 
 class CharField(BaseField):
-    def __set__(self, instance, value):
-        if value is None:
-            if self.required is True:
-                raise ValidationError(message="The parameter is mandatory")
-            
-            if self.nullable is False:
-                raise ValidationError(message="The parameter should be non-nullable")
-
-            self._value = value
-        else:
-            if not isinstance(value, str):
-                raise ValidationError(message="The parameter should be a string")
-
-            self._value = value
+    def check_conditions(self, instance, value):
+        if not isinstance(value, str):
+            raise ValidationError(message="The parameter should be a string")
 
 
 class ArgumentsField(BaseField):
-    def __set__(self, instance, value):
-        if value is None:
-            if self.required is True:
-                raise ValidationError(message="The parameter is mandatory")
-            
-            if self.nullable is False:
-                raise ValidationError(message="The parameter should be non-nullable")        
-
-            self._value = value
-        else:
-            if not isinstance(value, dict):
-                raise ValidationError(message="The parameter should be a dictionary")
-        
-            self._value = value
+    def check_conditions(self, instance, value):
+        if not isinstance(value, dict):
+            raise ValidationError(message="The parameter should be a dictionary")
 
 
-class EmailField(BaseField):
-    def __set__(self, instance, value):
-        if value is None:
-            if self.required is True:
-                raise ValidationError(message="The parameter is mandatory")
+class EmailField(CharField):
+    def check_conditions(self, instance, value):
+        super().check_conditions(instance, value)
 
-            if self.nullable is False:
-                raise ValidationError(message="The parameter should be non-nullable")
-
-            self._value = value
-        else:
-            if not isinstance(value, str):
-                raise ValidationError(message="The parameter should be a string")
-
-            if '@' not in value:
-                raise ValidationError(message="Invalid email given")
-
-            self._value = value
+        if '@' not in value:
+            raise ValidationError(message="Invalid email given")
 
 
 class PhoneField(BaseField):
-    def __set__(self, instance, value):
-        if value is None:
-            if self.required is True:
-                raise ValidationError(message="The parameter is mandatory")
+    def check_conditions(self, instance, value):
+        if not isinstance(value, (int, str)):
+            raise ValidationError(message="The parameter should be a string or integer")
 
-            if self.nullable is False:
-                raise ValidationError(message="The parameter should be non-nullable")
-
-            self._value = value
-        else:
-            if not isinstance(value, (int, str)):
-                raise ValidationError(message="The parameter should be a string or integer")
-
-            phone_pattern = re.compile(r'^7\d{10}')
-            if not phone_pattern.match('%s' % value):
-                raise ValidationError(message="Invalid phone number")
-
-            self._value = value
+        phone_pattern = re.compile(r'^7\d{10}')
+        if not phone_pattern.match('%s' % value):
+            raise ValidationError(message="Invalid phone number given: %s" % value)
 
 
-class DateField(BaseField):
-    def __set__(self, instance, value):
-        if value is None:
-            if self.required is True:
-                raise ValidationError(message="The parameter is mandatory")
+class DateField(CharField):
+    def check_conditions(self, instance, value):
+        super().check_conditions(instance, value)
+        try:
+            self.value_conversion(value)
+        except:
+            raise ValidationError(message="Invalid date; date should have a format 'DD.MM.YYYY' but %s is given"
+                                  % value)
 
-            if self.nullable is False:
-                raise ValidationError(message="The parameter should be non-nullable")
-
-            self._value = value
-        else:
-            if not isinstance(value, str):
-                raise ValidationError(message="The parameter should be a string")
-
-            date_pattern = re.compile(r'(\d{2})\.(\d{2})\.(\d{4})')
-            match = date_pattern.match(value)
-            if match:
-                day = int(match.group(1))
-                month = int(match.group(2))
-                year = int(match.group(3))
-            else:
-                raise ValidationError(message="Invalid date; date should have a format DD.MM.YYYY")
-
-            self._value = datetime.date(year=year, month=month, day=day)
+    def value_conversion(self, value):
+        return datetime.date(year=int(value[6:]),
+                             month=int(value[3:5]),
+                             day=int(value[:2]))
 
 
-class BirthDayField(BaseField):
-    def __set__(self, instance, value):
-        if value is None:
-            if self.required is True:
-                raise ValidationError(message="The parameter is mandatory")
+class BirthDayField(DateField):
+    def check_conditions(self, instance, value):
+        super().check_conditions(instance, value)
 
-            if self.nullable is False:
-                raise ValidationError(message="The parameter should be non-nullable")
+        birthday = self.value_conversion(value)
 
-            self._value = value
-        else:
-            if not isinstance(value, str):
-                raise ValidationError(message="The parameter should be a string")
-
-            birthday_pattern = re.compile(r'(\d{2})\.(\d{2})\.(\d{4})')
-            match = birthday_pattern.match(value)
-            if match:
-                day = int(match.group(1))
-                month = int(match.group(2))
-                year = int(match.group(3))
-            else:
-                raise ValidationError(message="Invalid date; date should have a format DD.MM.YYYY")
-
-            birthday = datetime.date(year=year, month=month, day=day)
-
-            if datetime.date.today() - birthday > datetime.timedelta(AGE_LIMIT * 365.2425):
-                raise ValidationError(message="Age limit exceeded")
-
-            self._value = birthday
+        if datetime.date.today() - birthday > datetime.timedelta(AGE_LIMIT * 365.2425):
+            raise ValidationError(message="Age limit exceeded")
 
 
 class GenderField(BaseField):
-    def __set__(self, instance, value):
-        if value is None:
-            if self.required is True:
-                raise ValidationError(message="The parameter is mandatory")
+    def check_conditions(self, instance, value):
+        if not isinstance(value, int):
+            raise ValidationError(message="The parameter should be an integer")
 
-            if self.nullable is False:
-                raise ValidationError(message="The parameter should be non-nullable")
+        if value not in [0, 1, 2]:
+            raise ValidationError(message="Invalid gender field")
 
-            self._value = value
-        else:
-            if not isinstance(value, int):
-                raise ValidationError(message="The parameter should be an integer")
-
-            if value not in [0, 1, 2]:
-                raise ValidationError(message="Invalid gender field")
-
-            self._value = str(value)
+    def value_conversion(self, value):
+        return str(value)
 
 
 class ClientIDsField(BaseField):
-    def __set__(self, instance, value):
-        if value is None:
-            if self.required is True:
-                raise ValidationError(message="The parameter is mandatory")
+    def check_conditions(self, instance, value):
+        if not isinstance(value, list):
+            raise ValidationError(message="The parameter should be a list")
 
-            if self.nullable is False:
-                raise ValidationError(message="The parameter should be non-nullable")
+        if not value:
+            raise ValidationError(message="Client ID list is empty")
 
-            self._value = value
-        else:
-            if not isinstance(value, list):
-                raise ValidationError(message="The parameter should be a list")
-
-            if not value:
-                raise ValidationError(message="Client ID list is empty")
-
-            for item in value:
-                if not isinstance(item, int):
-                    raise ValidationError(message="Invalid client ID is given")
-
-            self._value = value
+        for item in value:
+            if not isinstance(item, int):
+                raise ValidationError(message="Invalid client ID is given")
 
 
 class ApiRequest:
@@ -300,6 +241,7 @@ def check_auth(request):
     else:
         phrase = request.account + request.login + SALT
         digest = hashlib.sha512(phrase.encode('utf-8')).hexdigest()
+    ic(digest)
     if digest == request.token:
         return True
     return False
@@ -315,12 +257,12 @@ def method_handler(request, ctx, store):
             return None, FORBIDDEN, ctx
 
         if request.method == 'online_score':
-            request = OnlineScoreRequest(**request.arguments)
-            ctx['has'] = request.has
-            if not request.is_admin:
-                score = request.get_score()
-            else:
+            if request.is_admin:
                 score = 42
+            else:
+                request = OnlineScoreRequest(**request.arguments)
+                ctx['has'] = request.has
+                score = request.get_score()
             response = {"score": score}
             return response, OK, ctx
 
@@ -354,7 +296,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
         except:
             code = BAD_REQUEST
 
-        if request:
+        if request or (request == {}):
             path = self.path.strip("/")
             logging.info("%s: %s %s" % (self.path, data_string, context["request_id"]))
             if path in self.router:
