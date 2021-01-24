@@ -12,7 +12,11 @@ def cases(cases):
         def wrapper(*args):
             for c in cases:
                 new_args = args + (c if isinstance(c, tuple) else (c,))
-                f(*new_args)
+                try:
+                    f(*new_args)
+                except:
+                    from icecream import ic
+                    ic('TEST CASE FAILED', new_args)
         return wrapper
     return decorator
 

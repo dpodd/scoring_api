@@ -8,7 +8,6 @@ import logging
 import hashlib
 import uuid
 from optparse import OptionParser
-from typing import Type
 import re
 from scoring import get_score, get_interests
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -232,7 +231,25 @@ class ClientIDsField(BaseField):
             self._value = value
 
 
-class MethodRequest(object):
+class ApiRequest:
+    def __init__(self, **kwargs):
+        self.valid_fields = [k for k, v in self.__class__.__dict__.items() if isinstance(v, BaseField)]
+        self.has = []
+
+        for k in self.valid_fields:
+            if k in kwargs.keys():
+                setattr(self, k, kwargs[k])
+                self.has.append(k)
+            else:
+                setattr(self, k, None)
+
+        self.validate()
+
+    def validate(self):
+        pass
+
+
+class MethodRequest(ApiRequest):
     account = CharField(required=False, nullable=True)
     login = CharField(required=True, nullable=True)
     token = CharField(required=True, nullable=True)
@@ -243,23 +260,10 @@ class MethodRequest(object):
     def is_admin(self):
         return self.login == ADMIN_LOGIN
 
-    def validate(self, request):
-        self.account = request.get('body').get('account')
-        self.login = request.get('body').get('login')
-        self.token = request.get('body').get('token')
-        self.arguments = request.get('body').get('arguments')
-        self.method = request.get('body').get('method')
-        return self
-
 
 class ClientsInterestsRequest(MethodRequest):
     client_ids = ClientIDsField(required=True)
     date = DateField(required=False, nullable=True)
-
-    def validate(self, request: Type[MethodRequest]):
-        self.client_ids = request.arguments.get('client_ids')
-        self.date = request.arguments.get('date')
-        return self
 
     def get_interests(self):
         store = {"nclients": 0}
@@ -277,16 +281,8 @@ class OnlineScoreRequest(MethodRequest):
     phone = PhoneField(required=False, nullable=True)
     birthday = BirthDayField(required=False, nullable=True)
     gender = GenderField(required=False, nullable=True)
-    VALID_ARGUMENTS = ["first_name", "last_name", "email", "phone", "birthday", "gender"]
 
-    def validate(self, request: Type[MethodRequest]):
-        self.first_name = request.arguments.get('first_name')
-        self.last_name = request.arguments.get('last_name')
-        self.email = request.arguments.get('email')
-        self.phone = request.arguments.get('phone')
-        self.birthday = request.arguments.get('birthday')
-        self.gender = request.arguments.get('gender')
-
+    def validate(self):
         if not ((self.phone and self.email) or (self.first_name and self.last_name) or (self.gender and self.birthday)):
             raise ValidationError(message="Not enough data provided")
 
@@ -312,15 +308,15 @@ def check_auth(request):
 def method_handler(request, ctx, store):
     response, code, ctx = None, None, ctx
     try:
-        request = MethodRequest().validate(request)
+        request = MethodRequest(**request.get("body"))
 
         if not check_auth(request):
             logging.error("Wrong authentication token")
             return None, FORBIDDEN, ctx
 
         if request.method == 'online_score':
-            ctx['has'] = [key for key in request.arguments.keys() if key in OnlineScoreRequest.VALID_ARGUMENTS]
-            request = OnlineScoreRequest().validate(request)
+            request = OnlineScoreRequest(**request.arguments)
+            ctx['has'] = request.has
             if not request.is_admin:
                 score = request.get_score()
             else:
@@ -329,7 +325,7 @@ def method_handler(request, ctx, store):
             return response, OK, ctx
 
         elif request.method == 'clients_interests':
-            request = ClientsInterestsRequest().validate(request)
+            request = ClientsInterestsRequest(**request.arguments)
             response, store = request.get_interests()
             ctx.update(store)
             return response, OK, ctx
