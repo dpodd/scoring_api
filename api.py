@@ -206,14 +206,6 @@ class ClientsInterestsRequest(MethodRequest):
     client_ids = ClientIDsField(required=True)
     date = DateField(required=False, nullable=True)
 
-    def get_interests(self):
-        store = {"nclients": 0}
-        result = {}
-        for cid in self.client_ids:
-            interests, store = get_interests(store, cid)
-            result.update({str(cid): interests})
-        return result, store
-
 
 class OnlineScoreRequest(MethodRequest):
     first_name = CharField(required=False, nullable=True)
@@ -229,10 +221,6 @@ class OnlineScoreRequest(MethodRequest):
 
         return self
 
-    def get_score(self):
-        return get_score(None, self.phone, self.email, birthday=self.birthday,
-                         gender=self.gender, first_name=self.first_name, last_name=self.last_name)
-
 
 def check_auth(request):
     if request.is_admin:
@@ -241,7 +229,7 @@ def check_auth(request):
     else:
         phrase = request.account + request.login + SALT
         digest = hashlib.sha512(phrase.encode('utf-8')).hexdigest()
-    ic(digest)
+    logging.info('TOKEN: %s' % digest)
     if digest == request.token:
         return True
     return False
@@ -249,6 +237,11 @@ def check_auth(request):
 
 def method_handler(request, ctx, store):
     response, code, ctx = None, None, ctx
+    methods = {
+        'online_score': online_score_handler,
+        'clients_interests': clients_interests_handler
+    }
+    _request = request
     try:
         request = MethodRequest(**request.get("body"))
 
@@ -256,25 +249,44 @@ def method_handler(request, ctx, store):
             logging.error("Wrong authentication token")
             return None, FORBIDDEN, ctx
 
-        if request.method == 'online_score':
-            if request.is_admin:
-                score = 42
-            else:
-                request = OnlineScoreRequest(**request.arguments)
-                ctx['has'] = request.has
-                score = request.get_score()
-            response = {"score": score}
-            return response, OK, ctx
+        try:
+            response, code, ctx = methods[request.method](request, ctx, store)
+        except ValidationError:
+            raise
+        except:
+            logging.exception("Error during request: %s" % _request)
+            raise
+        else:
+            return response, code, ctx
 
-        elif request.method == 'clients_interests':
-            request = ClientsInterestsRequest(**request.arguments)
-            response, store = request.get_interests()
-            ctx.update(store)
-            return response, OK, ctx
     except ValidationError as e:
         logging.error("Validation error: %s" % e.message)
         code = INVALID_REQUEST
         return {'msg': 'validation error'}, code, ctx
+
+
+def online_score_handler(request: MethodRequest, ctx, store):
+    if request.is_admin:
+        score = 42
+    else:
+        request = OnlineScoreRequest(**request.arguments)
+        ctx['has'] = request.has
+        score = get_score(None, phone=request.phone,
+                          email=request.email, birthday=request.birthday,
+                          gender=request.gender, first_name=request.first_name,
+                          last_name=request.last_name)
+    response = {"score": score}
+    return response, OK, ctx
+
+
+def clients_interests_handler(request: MethodRequest, ctx, store):
+    request = ClientsInterestsRequest(**request.arguments)
+    response = {}
+    for cid in request.client_ids:
+        interests = get_interests(store, cid)
+        response.update({str(cid): interests})
+    ctx.update({"nclients": len(response)})
+    return response, OK, ctx
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
