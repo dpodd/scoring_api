@@ -11,6 +11,7 @@ from optparse import OptionParser
 import re
 from scoring import get_score, get_interests
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from store import Store
 
 SALT = "Otus"
 ADMIN_LOGIN = "admin"
@@ -269,7 +270,7 @@ def online_score_handler(request: MethodRequest, ctx, store):
     else:
         request = OnlineScoreRequest(**request.arguments)
         ctx['has'] = request.has
-        score = get_score(None, phone=request.phone,
+        score = get_score(store, phone=request.phone,
                           email=request.email, birthday=request.birthday,
                           gender=request.gender, first_name=request.first_name,
                           last_name=request.last_name)
@@ -291,7 +292,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
     router = {
         "method": method_handler
     }
-    store = None
+    store = Store()
 
     def get_request_id(self, headers):
         return headers.get('HTTP_X_REQUEST_ID', uuid.uuid4().hex)
