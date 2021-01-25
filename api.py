@@ -122,6 +122,9 @@ class PhoneField(BaseField):
         if not phone_pattern.match('%s' % value):
             raise ValidationError(message="Invalid phone number given: %s" % value)
 
+    def value_conversion(self, value):
+        return str(value)
+
 
 class DateField(CharField):
     def check_conditions(self, instance, value):
