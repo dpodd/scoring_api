@@ -48,7 +48,7 @@ class ValidationError(Exception):
 class DataNotProvided(Exception):
     """Handling 'None' assignment"""
 
-from icecream import ic
+
 class BaseField(ABC):
     def __init__(self, required=False, nullable=True):
         self.required = required
@@ -218,8 +218,6 @@ class OnlineScoreRequest(MethodRequest):
     def validate(self):
         if not ((self.phone and self.email) or (self.first_name and self.last_name) or (self.gender and self.birthday)):
             raise ValidationError(message="Not enough data provided")
-
-        return self
 
 
 def check_auth(request):
