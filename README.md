@@ -1,7 +1,7 @@
 ## Scoring API
 ### Homework #3 for 'OTUS Python Professional' Course
 
-A simple server that validates requests and serves requests with some data. More details are available in `description.md` (in Russian). 
+A simple server that validates requests and sends responses with some data. More details are available in `description.md` (in Russian). 
 
 The script was tested with Python 3.8.
 
