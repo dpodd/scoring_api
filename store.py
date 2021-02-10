@@ -10,7 +10,7 @@ class Store:
         self.client = redis.Redis()
 
     def set(self, key, value):
-        n = 0
+        n = 1
         while n <= MAX_ATTEMPTS:
             try:
                 self.client.set(key, value)
@@ -21,7 +21,7 @@ class Store:
         raise redis.exceptions.ConnectionError
 
     def get(self, key: str):
-        n = 0
+        n = 1
         while n <= MAX_ATTEMPTS:
             try:
                 resp = self.client.get(key)
@@ -31,7 +31,7 @@ class Store:
                 time.sleep(1)
             else:
                 if resp:
-                    return resp.decode("utf-8")
+                    return resp
                 return None
         raise redis.exceptions.ConnectionError
 
@@ -41,4 +41,8 @@ class Store:
 
     def cache_get(self, key: str):
         """ Implemented as an example; it goes to the same key-value storage """
-        return self.get(key)
+        # Emulate cache by trying to connect to Redis once
+        try:
+            return self.client.get(key)
+        except:
+            return None
