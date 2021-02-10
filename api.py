@@ -265,6 +265,8 @@ def method_handler(request, ctx, store):
         logging.error("Validation error: %s" % e.message)
         code = INVALID_REQUEST
         return {'msg': 'validation error'}, code, ctx
+    except Exception as e:
+        raise
 
 
 def online_score_handler(request: MethodRequest, ctx, store):

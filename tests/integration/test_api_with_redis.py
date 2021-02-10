@@ -1,7 +1,6 @@
 import hashlib
 import datetime
 import unittest
-from unittest.mock import patch
 import json
 
 import fakeredis
@@ -9,7 +8,6 @@ import fakeredis
 import api
 from store import Store
 from tests import cases
-
 
 
 class TestSuite(unittest.TestCase):
@@ -23,7 +21,13 @@ class TestSuite(unittest.TestCase):
         self.delete_keys_from_storage()
 
     def get_response(self, request):
-        return api.method_handler({"body": request, "headers": self.headers}, self.context, self.settings)
+        try:
+            response, code, ctx = api.method_handler({"body": request, "headers": self.headers}, self.context,
+                                                     self.settings)
+            return response, code, ctx
+        except Exception:
+            code = api.INTERNAL_ERROR
+            return {"msg": "Internal error during test request"}, code, {}
 
     def set_valid_auth(self, request):
         if request.get("login") == api.ADMIN_LOGIN:
@@ -118,20 +122,16 @@ class TestSuite(unittest.TestCase):
     ])
     def test_invalid_interests_when_storage_is_down(self, arguments):
         # emulate disfunctional storage
-        # from pdb import set_trace; set_trace()
-        # mockstore = MockStore.return_value
-
         server = fakeredis.FakeServer()
         server.connected = False
         self.settings.client = fakeredis.FakeStrictRedis(server=server)
-        # resp = MockStore.client.set("id1", "dfdfdf")
-        # print(resp)
+
         request = {"account": "horns&hoofs", "login": "h&f", "method": "clients_interests", "arguments": arguments}
         self.set_valid_auth(request)
         response, code, ctx = self.get_response(request)
-        # MockStore.client.assert_called_with()
-        print(response, code, ctx)
-        self.assertTrue(True)
+
+        self.assertEqual(code, api.INTERNAL_ERROR)
+
 
 if __name__ == '__main___':
     unittest.main()
