@@ -265,6 +265,10 @@ def method_handler(request, ctx, store):
         logging.error("Validation error: %s" % e.message)
         code = INVALID_REQUEST
         return {'msg': 'validation error'}, code, ctx
+    except Exception as e:
+        from icecream import ic
+        ic("raised: ", e)
+        raise Exception
 
 
 def online_score_handler(request: MethodRequest, ctx, store):
@@ -320,6 +324,8 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
                 except Exception as e:
                     logging.exception("Unexpected error: %s" % e)
                     code = INTERNAL_ERROR
+                    import icecream as ic
+                    ic.ic("raised2: ", e)
             else:
                 code = NOT_FOUND
         self.send_response(code)
