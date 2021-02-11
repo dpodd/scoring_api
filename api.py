@@ -83,9 +83,9 @@ class BaseField(ABC):
 
             raise DataNotProvided
         else:
-            self.check_conditions(instance, value)
+            self.check_conditions(value)
 
-    def check_conditions(self, instance, value):
+    def check_conditions(self, value):
         """Specific conditions for each field"""
 
     def value_conversion(self, value):
@@ -94,29 +94,29 @@ class BaseField(ABC):
 
 
 class CharField(BaseField):
-    def check_conditions(self, instance, value):
+    def check_conditions(self, value):
         if not isinstance(value, str):
-            raise ValidationError(message="The parameter %s should be a string" % self._name)
+            raise ValidationError(message="The parameter %s should be a string" % self.__class__)
 
 
 class ArgumentsField(BaseField):
-    def check_conditions(self, instance, value):
+    def check_conditions(self, value):
         if not isinstance(value, dict):
-            raise ValidationError(message="The parameter %s should be a dictionary" % self._name)
+            raise ValidationError(message="The parameter %s should be a dictionary" % self.__class__)
 
 
 class EmailField(CharField):
-    def check_conditions(self, instance, value):
-        super().check_conditions(instance, value)
+    def check_conditions(self, value):
+        super().check_conditions(value)
 
         if '@' not in value:
             raise ValidationError(message="Invalid email given")
 
 
 class PhoneField(BaseField):
-    def check_conditions(self, instance, value):
+    def check_conditions(self, value):
         if not isinstance(value, (int, str)):
-            raise ValidationError(message="The parameter %s should be a string or integer" % self._name)
+            raise ValidationError(message="The parameter %s should be a string or integer" % self.__class__)
 
         phone_pattern = re.compile(r'^7\d{10}')
         if not phone_pattern.match('%s' % value):
@@ -127,8 +127,8 @@ class PhoneField(BaseField):
 
 
 class DateField(CharField):
-    def check_conditions(self, instance, value):
-        super().check_conditions(instance, value)
+    def check_conditions(self, value):
+        super().check_conditions(value)
         try:
             self.value_conversion(value)
         except:
@@ -142,8 +142,8 @@ class DateField(CharField):
 
 
 class BirthDayField(DateField):
-    def check_conditions(self, instance, value):
-        super().check_conditions(instance, value)
+    def check_conditions(self, value):
+        super().check_conditions(value)
 
         birthday = self.value_conversion(value)
 
@@ -152,9 +152,9 @@ class BirthDayField(DateField):
 
 
 class GenderField(BaseField):
-    def check_conditions(self, instance, value):
+    def check_conditions(self, value):
         if not isinstance(value, int):
-            raise ValidationError(message="The parameter %s should be an integer" % self._name)
+            raise ValidationError(message="The parameter %s should be an integer" % self.__class__)
 
         if value not in [0, 1, 2]:
             raise ValidationError(message="Invalid gender field")
@@ -164,9 +164,9 @@ class GenderField(BaseField):
 
 
 class ClientIDsField(BaseField):
-    def check_conditions(self, instance, value):
+    def check_conditions(self, value):
         if not isinstance(value, list):
-            raise ValidationError(message="The parameter %s should be a list" % self._name)
+            raise ValidationError(message="The parameter %s should be a list" % self.__class__)
 
         if not value:
             raise ValidationError(message="Client ID list is empty")
