@@ -10,7 +10,7 @@ from store import Store
 from tests import cases
 
 
-class TestSuite(unittest.TestCase):
+class ApiTest(unittest.TestCase):
     def setUp(self):
         self.context = {}
         self.headers = {}
@@ -131,15 +131,6 @@ class TestSuite(unittest.TestCase):
         response, code, ctx = self.get_response(request)
 
         self.assertEqual(code, api.INTERNAL_ERROR)
-
-
-class StoreConnectedTestCase(unittest.TestCase):
-    """ Tests should pass when our key-value storage is active """
-    def setUp(self):
-        self.store = Store()
-
-    def test_store_connected(self):
-        self.assertEqual(self.store.ping(), True)
 
 
 if __name__ == '__main___':
