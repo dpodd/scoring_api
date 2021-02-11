@@ -4,7 +4,7 @@ from store import Store
 
 
 class StoreConnectedTestCase(unittest.TestCase):
-    """ Tests should pass when our key-value storage is active """
+    """ Tests should pass when our key-value storage (and cache) are running  and available """
     def setUp(self):
         self.store = Store()
         self.keys_for_cleanup = []
