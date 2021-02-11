@@ -12,6 +12,5 @@ def cases(cases):
                 except:
                     print(f"FAILED TEST with arguments: {new_args[1]} \n\tin {new_args[0]}")
                     # traceback.print_exception(*sys.exc_info())
-                    break
         return wrapper
     return decorator
