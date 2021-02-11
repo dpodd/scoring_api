@@ -38,6 +38,17 @@ class Store:
                 return None
         raise redis.exceptions.ConnectionError
 
+    def delete(self, *keys):
+        n = 1
+        while n <= MAX_ATTEMPTS:
+            try:
+                return self.client.delete(*keys)
+            except Exception as e:
+                logging.info("Cannot connect to Redis at %s attempt: %s ..." % (n, e))
+                n += 1
+                time.sleep(1)
+        raise redis.exceptions.ConnectionError
+
     def cache_set(self, key: str, value, seconds_to_expire):
         """ Implemented as an example; it goes to the same key-value storage """
         return self.client.setex(key, seconds_to_expire, value)
