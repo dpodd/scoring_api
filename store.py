@@ -9,6 +9,9 @@ class Store:
     def __init__(self):
         self.client = redis.Redis()
 
+    def ping(self):
+        return self.client.ping()
+
     def set(self, key, value):
         n = 1
         while n <= MAX_ATTEMPTS:
